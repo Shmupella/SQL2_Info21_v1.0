@@ -274,7 +274,7 @@ CREATE OR REPLACE PROCEDURE xp_export (
        )
        AS $$
  BEGIN
-       EXECUTE FORMAT('COPY "XP" TO ''/Users/%I/csv/XP_export.csv'' DELIMITER %L', current_user, delim);
+       EXECUTE FORMAT('COPY XP TO ''/Users/%I/csv/XP_export.csv'' DELIMITER %L', current_user, delim);
    END;
 $$ LANGUAGE plpgsql;
 
@@ -283,7 +283,7 @@ CREATE OR REPLACE PROCEDURE xp_import (
        )
        AS $$
  BEGIN
-       EXECUTE FORMAT('COPY "XP" FROM ''/Users/%I/csv/XP_import.csv'' DELIMITER %L', current_user, delim);
+       EXECUTE FORMAT('COPY XP FROM ''/Users/%I/csv/XP_import.csv'' DELIMITER %L', current_user, delim);
    END;
 $$ LANGUAGE plpgsql;
 
