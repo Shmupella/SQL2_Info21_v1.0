@@ -1,8 +1,8 @@
 -- 1) Написать функцию, возвращающую таблицу TransferredPoints в более человекочитаемом виде
 
-DROP FUNCTION IF EXISTS fnc_get_transferred_points_human_readable();
+DROP FUNCTION IF EXISTS get_transferred_points_human_readable();
 
-CREATE OR REPLACE FUNCTION fnc_get_transferred_points_human_readable() 
+CREATE OR REPLACE FUNCTION get_transferred_points_human_readable() 
 RETURNS TABLE (
         peer1 VARCHAR,
         peer2 VARCHAR,
@@ -29,7 +29,7 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
--- SELECT * FROM fnc_get_transferred_points_human_readable();
+-- SELECT * FROM get_transferred_points_human_readable();
 
 
 -- Версия, которая возвращает разницу
@@ -59,9 +59,9 @@ $$ LANGUAGE plpgsql;
 
 -- 2) Написать функцию, которая возвращает таблицу вида: ник пользователя, название проверенного задания, кол-во полученного XP
 
-DROP FUNCTION IF EXISTS fnc_success_tasks_and_xp();
+DROP FUNCTION IF EXISTS success_tasks_and_xp();
 
-CREATE OR REPLACE FUNCTION fnc_success_tasks_and_xp() RETURNS TABLE (peer VARCHAR, task VARCHAR, xp BIGINT) AS
+CREATE OR REPLACE FUNCTION success_tasks_and_xp() RETURNS TABLE (peer VARCHAR, task VARCHAR, xp BIGINT) AS
 $$
     SELECT peer, split_part(task, '_', 1) AS task, xpamount AS xp
     FROM checks JOIN p2p
@@ -73,14 +73,14 @@ $$
     WHERE p2p.state = 'Success' AND (verter.state = 'Success' OR verter.state IS NULL);
 $$LANGUAGE sql;
 
--- SELECT * FROM fnc_success_tasks_and_xp();
+-- SELECT * FROM success_tasks_and_xp();
 
 
 -- 3) Написать функцию, определяющую пиров, которые не выходили из кампуса в течение всего дня
 
-DROP FUNCTION IF EXISTS fnc_peers_have_no_left_campus(IN "date" date);
+DROP FUNCTION IF EXISTS peers_have_no_left_campus(IN "date" date);
 
-CREATE OR REPLACE FUNCTION fnc_peers_have_no_left_campus(IN "date" date)
+CREATE OR REPLACE FUNCTION peers_have_no_left_campus(IN "date" date)
 RETURNS SETOF varchar AS
 $$
 SELECT peer
@@ -89,14 +89,14 @@ GROUP BY peer, timetracking.date
 HAVING COUNT(state) = 1 OR COUNT(state) = 2 AND timetracking.date = $1;
 $$ LANGUAGE sql;
 
--- SELECT * FROM fnc_peers_have_no_left_campus('2023-03-11');
+-- SELECT * FROM peers_have_no_left_campus('2023-03-11');
 
 
 -- 4) Найти процент успешных и неуспешных проверок за всё время
 
-DROP PROCEDURE IF EXISTS proc_get_successful_checks;
+DROP PROCEDURE IF EXISTS get_successful_checks;
 
-CREATE OR REPLACE PROCEDURE proc_get_successful_checks(
+CREATE OR REPLACE PROCEDURE get_successful_checks(
         OUT successfulchecks   INTEGER,
         OUT unsuccessfulchecks INTEGER
 ) AS $$
@@ -126,14 +126,14 @@ DECLARE
     END;
 $$ LANGUAGE plpgsql;
 
---CALL proc_get_successful_checks(successfulchecks := 0, unsuccessfulchecks := 0);
+--CALL get_successful_checks(successfulchecks := 0, unsuccessfulchecks := 0);
 
 
 -- 5) Посчитать изменение в количестве пир поинтов каждого пира по таблице TransferredPoints
 
-DROP FUNCTION IF EXISTS fnc_calculate_changed_points();
+DROP FUNCTION IF EXISTS calculate_changed_points();
 
-CREATE OR REPLACE FUNCTION fnc_calculate_changed_points()
+CREATE OR REPLACE FUNCTION calculate_changed_points()
 RETURNS TABLE(peer VARCHAR, points_change BIGINT) AS
 $$
     WITH checking_peer AS (
@@ -153,14 +153,14 @@ $$
     ORDER BY pointschange;
 $$ LANGUAGE SQL;
 
--- SELECT * FROM fnc_calculate_changed_points();
+-- SELECT * FROM calculate_changed_points();
 
 
 --- 6) Посчитать изменение в количестве пир поинтов каждого пира по таблице, возвращаемой первой функцией из Part 3
 
-DROP FUNCTION IF EXISTS fnc_calculate_changed_points_with_human_readable_tab;
+DROP FUNCTION IF EXISTS calculate_changed_points_with_human_readable_tab;
 
-CREATE OR REPLACE FUNCTION fnc_calculate_changed_points_with_human_readable_tab()
+CREATE OR REPLACE FUNCTION calculate_changed_points_with_human_readable_tab()
 RETURNS TABLE (peer VARCHAR, pointschange INT) AS
 $$
     WITH norm_t AS (
@@ -171,7 +171,7 @@ $$
                     ELSE
                         pointsamount
                     END AS new_points
-        FROM fnc_get_transferred_points_human_readable()
+        FROM get_transferred_points_human_readable()
     ),
     checking_peer AS (
     SELECT peer1, SUM(new_points) AS got_points
@@ -190,14 +190,14 @@ $$
     ORDER BY pointschange;
 $$LANGUAGE sql;
 
--- SELECT * FROM fnc_calculate_changed_points_with_human_readable_tab();
+-- SELECT * FROM calculate_changed_points_with_human_readable_tab();
 
 
 -- 7) Определить самое часто проверяемое задание за каждый день
 
-DROP FUNCTION IF EXISTS fnc_get_most_frequent_check_per_day();
+DROP FUNCTION IF EXISTS get_most_frequent_check_per_day();
 
-CREATE OR REPLACE FUNCTION fnc_get_most_frequent_check_per_day() 
+CREATE OR REPLACE FUNCTION get_most_frequent_check_per_day() 
 RETURNS TABLE (
         "Day" DATE,
         task VARCHAR
@@ -225,14 +225,14 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
--- SELECT * FROM fnc_get_most_frequent_check_per_day();
+-- SELECT * FROM get_most_frequent_check_per_day();
 
 
 -- 8) Определить длительность последней P2P проверки
 
-DROP PROCEDURE IF EXISTS proc_duration_last_p2p_check(OUT res_time TIME);
+DROP PROCEDURE IF EXISTS duration_last_p2p_check(OUT res_time TIME);
 
-CREATE OR REPLACE PROCEDURE proc_duration_last_p2p_check(OUT res_time TIME) AS
+CREATE OR REPLACE PROCEDURE duration_last_p2p_check(OUT res_time TIME) AS
 $$
     SELECT (res_t.time - p2p.time)::TIME
     FROM
@@ -244,14 +244,14 @@ $$
     WHERE p2p.state = 'Start';
 $$LANGUAGE sql;
 
--- CALL proc_duration_last_p2p_check(NULL);
+-- CALL duration_last_p2p_check(NULL);
 
 
 -- 9) Найти всех пиров, выполнивших весь заданный блок задач и дату завершения последнего задания
 
-DROP FUNCTION IF EXISTS fnc_peers_done_whole_taskblock(IN block_name VARCHAR);
+DROP FUNCTION IF EXISTS peers_done_whole_taskblock(IN block_name VARCHAR);
 
-CREATE OR REPLACE FUNCTION fnc_peers_done_whole_taskblock(IN block_name VARCHAR)
+CREATE OR REPLACE FUNCTION peers_done_whole_taskblock(IN block_name VARCHAR)
 RETURNS TABLE(peer VARCHAR, day DATE) AS
 $$
     SELECT peer, "date" AS Day
@@ -265,14 +265,14 @@ $$
     ORDER BY Day DESC;
 $$LANGUAGE SQL;
 
--- SELECT * FROM fnc_peers_done_whole_taskblock('C');
+-- SELECT * FROM peers_done_whole_taskblock('C');
 
 
 -- 10) Определить, к какому пиру стоит идти на проверку каждому обучающемуся
 
-DROP FUNCTION IF EXISTS fnc_get_most_recommended_peer();
+DROP FUNCTION IF EXISTS get_most_recommended_peer();
 
-CREATE OR REPLACE FUNCTION fnc_get_most_recommended_peer() 
+CREATE OR REPLACE FUNCTION get_most_recommended_peer() 
 RETURNS TABLE (
         peer VARCHAR,
         recommendedpeer VARCHAR
@@ -312,7 +312,7 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
--- SELECT * FROM fnc_get_most_recommended_peer();
+-- SELECT * FROM get_most_recommended_peer();
 
 
 -- 11) Определить процент пиров, которые:
@@ -321,9 +321,9 @@ $$ LANGUAGE plpgsql;
 -- Приступили к обоим 
 -- Не приступили ни к одному
 
-DROP PROCEDURE IF EXISTS proc_percent_of_peers;
+DROP PROCEDURE IF EXISTS percent_of_peers;
 
-CREATE OR REPLACE PROCEDURE proc_percent_of_peers(IN name_block1 VARCHAR, IN name_block2 VARCHAR,
+CREATE OR REPLACE PROCEDURE percent_of_peers(IN name_block1 VARCHAR, IN name_block2 VARCHAR,
     OUT StartedBlock1 INT, OUT StartedBlock2 INT, OUT StartedBothBlocks INT, OUT DidntStartAnyBlock INT) AS
 $$
     DECLARE
@@ -373,14 +373,14 @@ $$
     END;
 $$LANGUAGE plpgsql;
 
--- CALL proc_percent_of_peers('SQL', 'D', NULL, NUll, NULL, NULL);
+-- CALL percent_of_peers('SQL', 'D', NULL, NUll, NULL, NULL);
 
 
 -- 12) Определить N пиров с наибольшим числом друзей
 
-DROP FUNCTION IF EXISTS fnc_peers_with_most_friends(N INT);
+DROP FUNCTION IF EXISTS peers_with_most_friends(N INT);
 
-CREATE OR REPLACE FUNCTION fnc_peers_with_most_friends (IN N INT)
+CREATE OR REPLACE FUNCTION peers_with_most_friends (IN N INT)
 RETURNS TABLE(Peer VARCHAR, FriendsCount INT) AS $$
     SELECT nickname AS peer, COALESCE(friendscount, 0) AS friendscount
     FROM peers LEFT JOIN (SELECT peer1, COUNT(peer2) AS friendscount
@@ -392,14 +392,14 @@ RETURNS TABLE(Peer VARCHAR, FriendsCount INT) AS $$
     LIMIT $1;
 $$LANGUAGE SQL;
 
--- SELECT * FROM fnc_peers_with_most_friends(N := 3);
+-- SELECT * FROM peers_with_most_friends(N := 3);
 
 
 -- 13) Определить процент пиров, которые когда-либо успешно проходили проверку в свой день рождения
 
-DROP PROCEDURE IF EXISTS proc_get_percent_of_birthday_checked_peers;
+DROP PROCEDURE IF EXISTS get_percent_of_birthday_checked_peers;
 
-CREATE OR REPLACE PROCEDURE proc_get_percent_of_birthday_checked_peers(
+CREATE OR REPLACE PROCEDURE get_percent_of_birthday_checked_peers(
         OUT successfulchecks   INTEGER,
         OUT unsuccessfulchecks INTEGER
         ) AS $$
@@ -452,14 +452,14 @@ DECLARE
     END;
 $$ LANGUAGE plpgsql;
 
--- CALL proc_get_percent_of_birthday_checked_peers(successfulchecks := 0, unsuccessfulchecks := 0);
+-- CALL get_percent_of_birthday_checked_peers(successfulchecks := 0, unsuccessfulchecks := 0);
 
 
 -- 14) Определить кол-во XP, полученное в сумме каждым пиром
 
-DROP FUNCTION IF EXISTS fnc_get_total_xp();
+DROP FUNCTION IF EXISTS get_total_xp();
 
-CREATE OR REPLACE FUNCTION fnc_get_total_xp()
+CREATE OR REPLACE FUNCTION get_total_xp()
 RETURNS TABLE (
         "Peer" VARCHAR,
         "XP" INT
@@ -480,14 +480,14 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
--- SELECT * FROM fnc_get_total_xp();
+-- SELECT * FROM get_total_xp();
 
 
 -- 15) Определить всех пиров, которые сдали заданные задания 1 и 2, но не сдали задание 3
 
-DROP FUNCTION IF EXISTS fnc_peers_did_given_task;
+DROP FUNCTION IF EXISTS peers_did_given_task;
 
-CREATE OR REPLACE FUNCTION fnc_peers_did_given_task(IN task1 VARCHAR, IN task2 VARCHAR, IN task3 VARCHAR)
+CREATE OR REPLACE FUNCTION peers_did_given_task(IN task1 VARCHAR, IN task2 VARCHAR, IN task3 VARCHAR)
 RETURNS SETOF VARCHAR AS $$
     WITH success_task1 AS (
     SELECT peer
@@ -537,7 +537,7 @@ RETURNS SETOF VARCHAR AS $$
 
 $$ LANGUAGE sql;
 
--- SELECT * FROM fnc_peers_did_given_task('C6_s21_matrix', 'C5_s21_decimal', 'C2_SimpleBashUtils');
+-- SELECT * FROM peers_did_given_task('C6_s21_matrix', 'C5_s21_decimal', 'C2_SimpleBashUtils');
 
 
 -- 16) Используя рекурсивное обобщенное табличное выражение, для каждой задачи вывести кол-во предшествующих ей задач
@@ -545,10 +545,10 @@ $$ LANGUAGE sql;
 -- вспомогательная функция: рекурсивно подсчитывает количество предшествующих задач
 -- для задания, переданного в качестве параметра
 
-DROP FUNCTION IF EXISTS fnc_count_previous_tasks;
-DROP FUNCTION IF EXISTS fnc_get_counted_previous_tasks_for_all();
+DROP FUNCTION IF EXISTS count_previous_tasks;
+DROP FUNCTION IF EXISTS get_counted_previous_tasks_for_all();
 
-CREATE OR REPLACE FUNCTION fnc_count_previous_tasks(
+CREATE OR REPLACE FUNCTION count_previous_tasks(
         IN task VARCHAR
         )
 RETURNS INTEGER AS $$
@@ -577,7 +577,7 @@ DECLARE
 $$ LANGUAGE plpgsql;
 
 -- основная функция
-CREATE OR REPLACE FUNCTION fnc_get_counted_previous_tasks_for_all()
+CREATE OR REPLACE FUNCTION get_counted_previous_tasks_for_all()
 RETURNS TABLE (
         task VARCHAR,
         prevcount INT
@@ -585,20 +585,20 @@ RETURNS TABLE (
   BEGIN
         RETURN QUERY
         SELECT title,
-               fnc_count_previous_tasks(title) AS prevcount
+               count_previous_tasks(title) AS prevcount
         FROM tasks;
      END;
 $$ LANGUAGE plpgsql;
 
--- SELECT * FROM fnc_get_counted_previous_tasks_for_all();
+-- SELECT * FROM get_counted_previous_tasks_for_all();
 
 
 
 -- 17) Найти "удачные" для проверок дни. День считается "удачным", если в нем есть хотя бы N идущих подряд успешных проверки
 
-DROP FUNCTION IF EXISTS fnc_lucky_days;
+DROP FUNCTION IF EXISTS lucky_days;
 
-CREATE OR REPLACE FUNCTION fnc_lucky_days(IN count INT)
+CREATE OR REPLACE FUNCTION lucky_days(IN count INT)
 RETURNS SETOF DATE AS
 $$
     WITH res_t AS (
@@ -636,14 +636,14 @@ $$
 
 $$LANGUAGE SQL;
 
--- SELECT * FROM fnc_lucky_days(2);
+-- SELECT * FROM lucky_days(2);
 
 
 --18) Определить пира с наибольшим числом выполненных заданий
 
-DROP PROCEDURE IF EXISTS proc_peer_with_the_most_tasks;
+DROP PROCEDURE IF EXISTS peer_with_the_most_tasks;
 
-CREATE OR REPLACE PROCEDURE proc_peer_with_the_most_tasks(OUT "Peer" VARCHAR, OUT "XP" BIGINT) AS
+CREATE OR REPLACE PROCEDURE peer_with_the_most_tasks(OUT "Peer" VARCHAR, OUT "XP" BIGINT) AS
 $$
     SELECT peer, count(task) AS xp
     FROM checks JOIN p2p
@@ -656,37 +656,37 @@ $$
     LIMIT 1;
 $$ LANGUAGE sql;
 
--- CALL fnc_peer_with_the_most_tasks(NULL, NULL);
+-- CALL peer_with_the_most_tasks(NULL, NULL);
 
 
 -- 19) Определить пира с наибольшим количеством XP
 
-DROP PROCEDURE IF EXISTS proc_get_peer_with_max_xp;
+DROP PROCEDURE IF EXISTS get_peer_with_max_xp;
 
-CREATE OR REPLACE PROCEDURE proc_get_peer_with_max_xp(
+CREATE OR REPLACE PROCEDURE get_peer_with_max_xp(
        OUT "Peer" VARCHAR,
        OUT "XP"   INTEGER
 ) AS $$
  BEGIN
-       SELECT MAX(fnc_get_total_xp."XP")
-         FROM fnc_get_total_xp() 
+       SELECT MAX(get_total_xp."XP")
+         FROM get_total_xp() 
          INTO "XP";
 
-       SELECT fnc_get_total_xp."Peer"
-         FROM fnc_get_total_xp()
+       SELECT get_total_xp."Peer"
+         FROM get_total_xp()
          INTO "Peer"
-        WHERE fnc_get_total_xp."XP" = "proc_get_peer_with_max_xp"."XP";
+        WHERE get_total_xp."XP" = "get_peer_with_max_xp"."XP";
     END;
 $$ LANGUAGE plpgsql;
 
--- CALL proc_get_peer_with_max_xp("Peer" := '', "XP" := 0);
+-- CALL get_peer_with_max_xp("Peer" := '', "XP" := 0);
 
 
 -- 20) Определить пира, который провел сегодня в кампусе больше всего времени
 
-DROP PROCEDURE IF EXISTS proc_get_peer_with_most_time_today;
+DROP PROCEDURE IF EXISTS get_peer_with_most_time_today;
 
-CREATE OR REPLACE PROCEDURE proc_get_peer_with_most_time_today(
+CREATE OR REPLACE PROCEDURE get_peer_with_most_time_today(
        OUT "Peer" VARCHAR
 ) AS $$
  BEGIN
@@ -719,14 +719,14 @@ CREATE OR REPLACE PROCEDURE proc_get_peer_with_most_time_today(
 $$
 LANGUAGE plpgsql;
 
--- CALL proc_get_peer_with_most_time_today("Peer" := '');
+-- CALL get_peer_with_most_time_today("Peer" := '');
 
 
 -- 21) Определить пиров, приходивших раньше заданного времени не менее N раз за всё время
 
-DROP FUNCTION IF EXISTS fnc_time_coming;
+DROP FUNCTION IF EXISTS time_coming;
 
-CREATE OR REPLACE FUNCTION fnc_time_coming(IN time_n TIME, IN N bigint) RETURNS SETOF VARCHAR AS
+CREATE OR REPLACE FUNCTION time_coming(IN time_n TIME, IN N bigint) RETURNS SETOF VARCHAR AS
 $$
     SELECT peer
     FROM timetracking
@@ -735,14 +735,14 @@ $$
     HAVING count(time) >= $2;
 $$LANGUAGE sql;
 
--- SELECT * FROM fnc_time_coming('17:30:00', 3);
+-- SELECT * FROM time_coming('17:30:00', 3);
 
 
 -- 22) Определить пиров, выходивших за последние N дней из кампуса больше M раз
 
-DROP FUNCTION IF EXISTS func_get_peers_which_exit;
+DROP FUNCTION IF EXISTS get_peers_which_exit;
 
-CREATE OR REPLACE FUNCTION func_get_peers_which_exit(
+CREATE OR REPLACE FUNCTION get_peers_which_exit(
         IN n INTEGER,
         IN m INTEGER
         )
@@ -767,14 +767,14 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
--- SELECT * FROM func_get_peers_which_exit(10, 1);
+-- SELECT * FROM get_peers_which_exit(10, 1);
 
 
 --23) Определить пира, который пришел сегодня последним
 
-DROP PROCEDURE IF EXISTS proc_last_come_peer_today;
+DROP PROCEDURE IF EXISTS last_come_peer_today;
 
-CREATE OR REPLACE PROCEDURE proc_last_come_peer_today(OUT nickname VARCHAR) AS
+CREATE OR REPLACE PROCEDURE last_come_peer_today(OUT nickname VARCHAR) AS
 $$
     SELECT peer FROM timetracking
     WHERE date = current_date AND state = 1
@@ -782,14 +782,14 @@ $$
     LIMIT 1;
 $$LANGUAGE sql;
 
--- CALL proc_last_come_peer_today(NULL);
+-- CALL last_come_peer_today(NULL);
 
 
 -- 24) Определить пиров, которые выходили вчера из кампуса больше чем на N минут
 
-DROP FUNCTION IF EXISTS fnc_peer_left_more_than_minutes;
+DROP FUNCTION IF EXISTS peer_left_more_than_minutes;
 
-CREATE OR REPLACE FUNCTION fnc_peer_left_more_than_minutes(IN time_absence TIME) RETURNS SETOF VARCHAR AS
+CREATE OR REPLACE FUNCTION peer_left_more_than_minutes(IN time_absence TIME) RETURNS SETOF VARCHAR AS
 $$
 DECLARE
         N integer := 0;
@@ -836,14 +836,14 @@ DECLARE
 END;
 $$ LANGUAGE plpgsql;
 
--- SELECT * FROM fnc_peer_left_more_than_minutes('00:10:00');
+-- SELECT * FROM peer_left_more_than_minutes('00:10:00');
 
 
 -- 25) Определить для каждого месяца процент ранних входов
 
-DROP FUNCTION IF EXISTS fnc_get_early_entries_at_birthday_month();
+DROP FUNCTION IF EXISTS get_early_entries_at_birthday_month();
 
-CREATE OR REPLACE FUNCTION fnc_get_early_entries_at_birthday_month()
+CREATE OR REPLACE FUNCTION get_early_entries_at_birthday_month()
 RETURNS TABLE (
         month VARCHAR,
         earlyentries INT
@@ -916,4 +916,4 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
--- SELECT * FROM fnc_get_early_entries_at_birthday_month();
+-- SELECT * FROM get_early_entries_at_birthday_month();
